@@ -1,0 +1,90 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Portatil Desktop: Clean for Linux",
+            "type": "shell",
+            "command": "make -C ${workspaceFolder}/Targets/Linux64 clean",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "Portatil Desktop: Build for Linux",
+            "type": "shell",
+            "command": "make -C ${workspaceFolder}/Targets/Linux64 clean && make -C ${workspaceFolder}/Targets/Linux64 && make -C ${workspaceFolder}/Targets/Linux64 clean",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "Portatil: Pack Assets",
+            "type": "shell",
+            "command": "${workspaceFolder}/Portatil.Tools.x64 packer ${workspaceFolder}/Assets ${workspaceFolder}/Runtime \"Kernel.h\"",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "Tools: Clean for Linux",
+            "type": "shell",
+            "command": "make -C ${workspaceFolder}/Tools clean",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "Tools: Build for Linux",
+            "type": "shell",
+            "command": "make -C ${workspaceFolder}/Tools clean && make -C ${workspaceFolder}/Tools && make -C ${workspaceFolder}/Tools clean",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "Demo Game: Build",
+            "type": "shell",
+            "command": "make -C ${workspaceFolder}/Apps/DemoGame clean && make -C ${workspaceFolder}/Apps/DemoGame && make -C ${workspaceFolder}/Apps/DemoGame clean",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+        },
+        {
+            "label": "Demo Game: Link",
+            "type": "shell",
+            "command": "${workspaceFolder}/Portatil.Tools.x64 linker ${workspaceFolder}/Apps/DemoGame/Build/DemoGame.elf ${workspaceFolder}/Apps/DemoGame.rvp",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "dependsOn": [
+                "Tools: Build for Linux",
+                "Demo Game: Build",
+            ],
+            "dependsOrder": "sequence"
+        },
+        {
+            "label": "Demo Game: Pack Assets",
+            "type": "shell",
+            "command": "${workspaceFolder}/Portatil.Tools.x64 packer ${workspaceFolder}/Apps/DemoGame/Assets ${workspaceFolder}/Apps/DemoGame \"../../SDK/Portatil.h\"",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        }
+    ]
+}
