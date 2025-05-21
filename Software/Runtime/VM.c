@@ -1449,6 +1449,8 @@ static const instructionFunction instructionSet[128] = {
 
 // Virtual Machine ------------------------------------------------------------
 
+static u64 busyTime = 0;
+
 static bool resetVirtualMachine(const u32 entrypointAddress, const u32 memoryOffset, const u32 programSize) {
     if ((entrypointAddress > VirtualMachineMemorySize - 4) || (memoryOffset > VirtualMachineMemorySize - 4) || (programSize > VirtualMachineMemorySize)) {
         return false;
@@ -1472,11 +1474,13 @@ static bool resetVirtualMachine(const u32 entrypointAddress, const u32 memoryOff
     assertAddress(programCounter, 4);
     setX(SP, VirtualMachineMemorySize);
 
+    busyTime = 0;
     return true;
 }
 
 bool InitializeVirtualMachine(void) {
     initializeSysCalls();
+    busyTime = 0;
     return true;
 }
 
@@ -1547,11 +1551,20 @@ bool SyncVirtualMachine(const f16 speedMultiplier) {
         errorMessage[0] = 0;
     }
 
+    busyTime += GetTick() - startTime;
     return returnValue;
 }
 
 string GetVirtualMachineError(void) {
     return errorMessage[0] == 0 ? NULL : errorMessage;
+}
+
+void ResetVirtualMachineTime(void) {
+    busyTime = 0;
+}
+
+u64 GetVirtualMachineTime(void) {
+    return busyTime;
 }
 
 // Programs -------------------------------------------------------------------

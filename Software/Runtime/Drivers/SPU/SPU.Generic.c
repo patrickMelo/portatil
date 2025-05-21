@@ -12,7 +12,8 @@
 #define sampleMin F16(-127)
 #define sampleMax F16(127)
 
-static i8 soundBuffer[SoundBufferSize];
+static i8  soundBuffer[SoundBufferSize];
+static u64 busyTime = 0;
 
 typedef struct ChannelState {
         WaveType waveType;
@@ -112,6 +113,7 @@ bool DrvSpuInitialize(void) {
         channels[channelIndex].isPaused         = false;
     }
 
+    busyTime = 0;
     return true;
 }
 
@@ -119,7 +121,7 @@ void DrvSpuFinalize(void) {
     // Empty
 }
 
-void DrvSpuSync(void) {
+u64 DrvSpuSync(void) {
     u64 syncTick = DrvCpuGetTick();
 
     for (SoundChannel channelIndex = SoundChannel1; channelIndex < NumberOfSoundChannels; ++channelIndex) {
@@ -142,7 +144,15 @@ void DrvSpuSync(void) {
 
     fillBuffer();
 
+    busyTime = DrvCpuGetTick() - syncTick;
+
     DrvSpeakerSync(soundBuffer);
+
+    return busyTime;
+}
+
+u64 DrvSpuGetTime(void) {
+    return busyTime;
 }
 
 void DrvSpuSetChannelVolume(const SoundChannel channelIndex, const u8 volumePercent) {

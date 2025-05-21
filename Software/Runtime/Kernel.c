@@ -115,6 +115,8 @@ bool Boot(KernelFunction bootFunction) {
     currentState      = bootFunction;
 
     while (!shutdownRequested) {
+        DrvStorageResetTime();
+
         syncTick = DrvCpuSync();
 
         lastFrameTime      = syncTick - lastSyncTick;
@@ -177,6 +179,28 @@ u64 GetBusyFrameTime(void) {
 
 void Sleep(const u64 waitTime) {
     DrvCpuWait(waitTime);
+}
+
+// Timers ---------------------------------------------------------------------
+
+u64 GetGpuTime(void) {
+    return DrvGpuGetTime();
+}
+
+u64 GetDisplayTime(void) {
+    return DrvDisplayGetTime();
+}
+
+u64 GetSpuTime(void) {
+    return DrvSpuGetTime();
+}
+
+u64 GetSpeakerTime(void) {
+    return DrvSpeakerGetTime();
+}
+
+u64 GetStorageTime(void) {
+    return DrvStorageGetTime();
 }
 
 // Power ----------------------------------------------------------------------
@@ -552,7 +576,7 @@ bool OpenDirectory(const string directoryPath) {
 }
 
 bool GetNextDirectoryEntryInfo(StorageEntryInfo* entryInfo) {
-    return DrvStorageGetNextDirectoryEntryInfo(entryInfo);
+    return DrvStorageReadDirectory(entryInfo);
 }
 
 void CloseDirectory(void) {

@@ -15,6 +15,7 @@
 
 static u16 bufferIndex = 0;
 static u8  soundBuffer[SoundBufferSize];
+static u64 busyTime = 0;
 
 // PWM ------------------------------------------------------------------------
 
@@ -64,6 +65,7 @@ bool DrvSpeakerInitialize(void) {
     irq_set_exclusive_handler(PWM_DEFAULT_IRQ_NUM(), pwmWrap);
     irq_set_enabled(PWM_DEFAULT_IRQ_NUM(), true);
 
+    busyTime = 0;
     return true;
 }
 
@@ -71,10 +73,19 @@ void DrvSpeakerFinalize(void) {
     gpio_deinit(outputPin);
 }
 
-void DrvSpeakerSync(const i8* soundData) {
+u64 DrvSpeakerSync(const i8* soundData) {
+    u64 startTime = DrvCpuGetTick();
+
     for (u16 sampleIndex = 0; sampleIndex < SoundBufferSize; sampleIndex++) {
         soundBuffer[sampleIndex] = soundData[sampleIndex];
     }
 
     bufferIndex = 0;
+
+    busyTime = DrvCpuGetTick() - startTime;
+    return busyTime;
+}
+
+u64 DrvSpeakerGetTime(void) {
+    return busyTime;
 }

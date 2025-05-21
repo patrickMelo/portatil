@@ -31,7 +31,9 @@ void DrvCpuWaitMessage(const u8 coreIndex, void* messageData);
 bool DrvDisplayInitialize(void);
 void DrvDisplayFinalize(void);
 
-void DrvDisplaySync(const u8* framebufferData, const u8* colorPalette);
+void DrvDisplaySetColorPallete(const u8* colorPalette);
+u64  DrvDisplaySync(const u8* framebufferData);
+u64  DrvDisplayGetTime(void);
 
 // GPIO -----------------------------------------------------------------------
 
@@ -61,7 +63,8 @@ bool DrvGpuInitialize(void);
 void DrvGpuFinalize(void);
 
 void DrvGpuClear(const u8 colorIndex);
-void DrvGpuSync(void);
+u64  DrvGpuSync(void);
+u64  DrvGpuGetTime(void);
 
 void DrvGpuSetTransparentColor(const u16 colorIndex);
 void DrvGpuSetBackgroundColor(const u16 colorIndex);
@@ -113,14 +116,16 @@ bool DrvSerialWrite(const SerialPortNumber portNumber, const u32 size, u8* buffe
 bool DrvSpeakerInitialize(void);
 void DrvSpeakerFinalize(void);
 
-void DrvSpeakerSync(const i8* soundData);
+u64 DrvSpeakerSync(const i8* soundData);
+u64 DrvSpeakerGetTime(void);
 
 // SPU ------------------------------------------------------------------------
 
 bool DrvSpuInitialize(void);
 void DrvSpuFinalize(void);
 
-void DrvSpuSync(void);
+u64 DrvSpuSync(void);
+u64 DrvSpuGetTime(void);
 
 void DrvSpuSetChannelVolume(const SoundChannel channelIndex, const u8 volumePercent);
 void DrvSpuPlayTone(const SoundChannel channelIndex, const WaveType waveType, const u16 noteFrequency, const u32 durationMs);
@@ -133,12 +138,15 @@ bool DrvStorageInitialize(void);
 void DrvStorageFinalize(void);
 
 bool DrvStorageOpenDirectory(const string directoryPath);
-bool DrvStorageGetNextDirectoryEntryInfo(StorageEntryInfo* entryInfo);
+bool DrvStorageReadDirectory(StorageEntryInfo* entryInfo);
 void DrvStorageCloseDirectory(void);
 
 bool DrvStorageOpenFile(const string filePath);
 u32  DrvStorageGetFileSize(void);
 bool DrvStorageReadFile(void* readBuffer, const u32 readSize);
 void DrvStorageCloseFile(void);
+
+void DrvStorageResetTime(void);
+u64  DrvStorageGetTime(void);
 
 #endif    // PORTATIL_DRIVERS_H

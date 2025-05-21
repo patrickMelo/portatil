@@ -58,6 +58,14 @@ u64  GetFrameTime(void);
 u64  GetBusyFrameTime(void);
 void Sleep(const u64 waitTime);
 
+// Timers ---------------------------------------------------------------------
+
+u64 GetGpuTime(void);
+u64 GetDisplayTime(void);
+u64 GetSpuTime(void);
+u64 GetSpeakerTime(void);
+u64 GetStorageTime(void);
+
 // Power ----------------------------------------------------------------------
 
 u8   GetBatteryPercentageLeft(void);
@@ -186,9 +194,9 @@ void StopAllSound(void);
 
 // Storage --------------------------------------------------------------------
 
-#define StorageMaxPathLength       4096
+#define StorageMaxPathLength       1024
 #define StorageMaxNameLength       128
-#define StorageMaxDirectoryEntries 256
+#define StorageMaxDirectoryEntries 128
 
 #define StorageEntryDirectoryFlag 0b10000000
 #define StorageEntryProgramFlag   0b00000001

@@ -18,6 +18,9 @@ bool   InitializeVirtualMachine(void);
 bool   SyncVirtualMachine(const f16 speedMultiplier);
 string GetVirtualMachineError(void);
 
+void ResetVirtualMachineTime(void);
+u64  GetVirtualMachineTime(void);
+
 // Programs -------------------------------------------------------------------
 
 #define MaxProgramSize 65536    // 64K

@@ -21,6 +21,9 @@ static SDL_Surface* sdlWindowSurface = NULL;
 static SDL_Surface* sdlBlitSurface   = NULL;
 static SDL_Rect     sdlWindowRect    = {0, 0, displayWidth* windowScale, displayHeight* windowScale};
 
+static u64 busyTime = 0;
+static u8  localColorPallete[ScreenColors * 3];
+
 // Driver ---------------------------------------------------------------------
 
 bool DrvDisplayInitialize(void) {
@@ -52,6 +55,7 @@ bool DrvDisplayInitialize(void) {
     }
 
     SDL_FillRect(sdlBlitSurface, NULL, 0);
+    busyTime = 0;
     return true;
 }
 
@@ -71,7 +75,12 @@ void DrvDisplayFinalize(void) {
     sdlWindow        = NULL;
 }
 
-void DrvDisplaySync(const u8* framebufferData, const u8* colorPalette) {
+void DrvDisplaySetColorPallete(const u8* colorPalette) {
+    memcpy(localColorPallete, colorPalette, ScreenColors * 3);
+}
+
+u64 DrvDisplaySync(const u8* framebufferData) {
+    u64 startTime = DrvCpuGetTick();
     SDL_LockSurface(sdlBlitSurface);
 
     u8* surfacePixels = sdlBlitSurface->pixels;
@@ -86,9 +95,9 @@ void DrvDisplaySync(const u8* framebufferData, const u8* colorPalette) {
 
             targetOffset = (pixelY * sdlBlitSurface->pitch) + (pixelX * 3);
 
-            surfacePixels[targetOffset]     = colorPalette[colorIndex * 3 + 2];
-            surfacePixels[targetOffset + 1] = colorPalette[colorIndex * 3 + 1];
-            surfacePixels[targetOffset + 2] = colorPalette[colorIndex * 3];
+            surfacePixels[targetOffset]     = localColorPallete[colorIndex * 3 + 2];
+            surfacePixels[targetOffset + 1] = localColorPallete[colorIndex * 3 + 1];
+            surfacePixels[targetOffset + 2] = localColorPallete[colorIndex * 3];
         }
     }
 
@@ -96,4 +105,11 @@ void DrvDisplaySync(const u8* framebufferData, const u8* colorPalette) {
 
     SDL_BlitScaled(sdlBlitSurface, NULL, sdlWindowSurface, &sdlWindowRect);
     SDL_UpdateWindowSurface(sdlWindow);
+
+    busyTime = DrvCpuGetTick() - startTime;
+    return busyTime;
+}
+
+u64 DrvDisplayGetTime(void) {
+    return busyTime;
 }

@@ -7,6 +7,16 @@
 
 #include "../../Drivers.h"
 
+static u64 timeCounter = 0;
+
+void DrvStorageResetTimer(void) {
+    timeCounter = 0;
+}
+
+u64 DrvStorageGetTimer(void) {
+    return timeCounter;
+}
+
 // FAT32 ----------------------------------------------------------------------
 
 extern bool Fat32InitializeMedia(void);
@@ -396,6 +406,11 @@ static bool findEntry(fat32DirectoryPointer* directory, const string entryPath, 
 
 // Driver ---------------------------------------------------------------------
 
+static u64 busyTime = 0;
+
+#define startTimer() u64 startTime = DrvCpuGetTick()
+#define stopTimer()  busyTime += DrvCpuGetTick() - startTime
+
 bool DrvStorageInitialize(void) {
     if (!Fat32InitializeMedia()) {
         return false;
@@ -416,28 +431,37 @@ void DrvStorageFinalize(void) {
 bool DrvStorageOpenDirectory(const string directoryPath) {
     DrvStorageCloseDirectory();
 
+    startTimer();
+
     if (!findEntry(&rootDirectory, directoryPath, &currentDirectory, &currentDirectoryEntry)) {
+        stopTimer();
         return false;
     }
 
     fat32ResetDirectory(&currentDirectory);
     isDirectoryOpen = true;
+
+    stopTimer();
     return true;
 }
 
-bool DrvStorageGetNextDirectoryEntryInfo(StorageEntryInfo* entryInfo) {
+bool DrvStorageReadDirectory(StorageEntryInfo* entryInfo) {
     if (!isDirectoryOpen) {
         return false;
     }
 
     static fat32DirectoryEntry entry;
 
+    startTimer();
+
     if (!fat32GetNextDirectoryEntry(&currentDirectory, &entry)) {
+        stopTimer();
         return false;
     }
 
     if ((entry.fileAttributes & fat32VolumeIdFlag) || (entry.shortName[0] == '.')) {
-        return DrvStorageGetNextDirectoryEntryInfo(entryInfo);
+        stopTimer();
+        return DrvStorageReadDirectory(entryInfo);
     }
 
     strncpy(entryInfo->Name, entry.longName, StorageMaxNameLength);
@@ -459,6 +483,7 @@ bool DrvStorageGetNextDirectoryEntryInfo(StorageEntryInfo* entryInfo) {
         }
     }
 
+    stopTimer();
     return true;
 }
 
@@ -469,12 +494,16 @@ void DrvStorageCloseDirectory(void) {
 bool DrvStorageOpenFile(const string filePath) {
     DrvStorageCloseFile();
 
+    startTimer();
+
     if (!findEntry(&rootDirectory, filePath, &currentFile, &currentFileEntry)) {
+        stopTimer();
         return false;
     }
 
     isFileOpen        = true;
     currentFileOffset = 0;
+    stopTimer();
     return true;
 }
 
@@ -490,6 +519,8 @@ bool DrvStorageReadFile(void* readBuffer, const u32 readSize) {
     if (!isFileOpen) {
         return false;
     }
+
+    startTimer();
 
     u32 bytesLeft = readSize;
     u32 readIndex = 0;
@@ -517,13 +548,23 @@ bool DrvStorageReadFile(void* readBuffer, const u32 readSize) {
         sectorBytes -= bytesToRead;
 
         if ((sectorBytes == 0) && (bytesLeft > 0) && !fat32AdvanceFile(&currentFile)) {
+            stopTimer();
             return false;
         }
     }
 
+    stopTimer();
     return true;
 }
 
 void DrvStorageCloseFile(void) {
     isFileOpen = false;
+}
+
+void DrvStorageResetTime(void) {
+    busyTime = 0;
+}
+
+u64 DrvStorageGetTime(void) {
+    return busyTime;
 }

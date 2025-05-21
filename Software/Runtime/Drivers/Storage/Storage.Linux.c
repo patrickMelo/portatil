@@ -17,6 +17,7 @@ static char  rootDirectoryPath[PATH_MAX + 1];
 static DIR*  currentDirectory = NULL;
 static FILE* currentFile      = NULL;
 static u32   currentFileSize  = 0;
+static u64   busyTime         = 0;
 
 static inline void getAbsolutePath(string pathBuffer, string relativePath) {
     strncpy(pathBuffer, rootDirectoryPath, PATH_MAX);
@@ -24,9 +25,13 @@ static inline void getAbsolutePath(string pathBuffer, string relativePath) {
     strncat(pathBuffer, relativePath, 64);
 }
 
+#define startTimer() u64 startTime = DrvCpuGetTick()
+#define stopTimer()  busyTime += DrvCpuGetTick() - startTime
+
 // Driver ---------------------------------------------------------------------
 
 bool DrvStorageInitialize(void) {
+    busyTime = 0;
     return getcwd(rootDirectoryPath, PATH_MAX) != NULL;
 }
 
@@ -38,17 +43,22 @@ void DrvStorageFinalize(void) {
 bool DrvStorageOpenDirectory(const string directoryPath) {
     DrvStorageCloseDirectory();
 
+    startTimer();
+
     static char absolutePath[PATH_MAX + 1];
     getAbsolutePath(absolutePath, directoryPath);
     currentDirectory = opendir(absolutePath);
 
+    stopTimer();
     return currentDirectory != NULL;
 }
 
-bool DrvStorageGetNextDirectoryEntryInfo(StorageEntryInfo* entryInfo) {
+bool DrvStorageReadDirectory(StorageEntryInfo* entryInfo) {
     if (!currentDirectory) {
         return false;
     }
+
+    startTimer();
 
     static char extensionBuffer[5];
     static u16  nameLength;
@@ -67,6 +77,7 @@ bool DrvStorageGetNextDirectoryEntryInfo(StorageEntryInfo* entryInfo) {
             case DT_DIR: {
                 strncpy(entryInfo->Name, entry->d_name, StorageMaxNameLength);
                 entryInfo->Flags |= StorageEntryDirectoryFlag;
+                stopTimer();
                 return true;
             }
 
@@ -82,6 +93,7 @@ bool DrvStorageGetNextDirectoryEntryInfo(StorageEntryInfo* entryInfo) {
                     }
                 }
 
+                stopTimer();
                 return true;
             }
         }
@@ -89,6 +101,7 @@ bool DrvStorageGetNextDirectoryEntryInfo(StorageEntryInfo* entryInfo) {
         entry = readdir(currentDirectory);
     }
 
+    stopTimer();
     return false;
 }
 
@@ -104,6 +117,8 @@ void DrvStorageCloseDirectory(void) {
 bool DrvStorageOpenFile(const string filePath) {
     DrvStorageCloseFile();
 
+    startTimer();
+
     static char absolutePath[PATH_MAX + 1];
     getAbsolutePath(absolutePath, filePath);
 
@@ -117,6 +132,7 @@ bool DrvStorageOpenFile(const string filePath) {
         currentFileSize = 0;
     }
 
+    stopTimer();
     return currentFile != NULL;
 }
 
@@ -129,7 +145,11 @@ bool DrvStorageReadFile(void* readBuffer, const u32 readSize) {
         return false;
     }
 
-    return fread(readBuffer, readSize, 1, currentFile) == 1;
+    startTimer();
+    bool readResult = fread(readBuffer, readSize, 1, currentFile) == 1;
+    stopTimer();
+
+    return readResult;
 }
 
 void DrvStorageCloseFile(void) {
@@ -141,4 +161,12 @@ void DrvStorageCloseFile(void) {
 
     currentFile     = NULL;
     currentFileSize = 0;
+}
+
+void DrvStorageResetTime(void) {
+    busyTime = 0;
+}
+
+u64 DrvStorageGetTime(void) {
+    return busyTime;
 }

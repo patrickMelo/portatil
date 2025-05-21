@@ -70,10 +70,18 @@ bool DrvGpioConfigure(const u8 pinNumber, const GpioMode mode, const GpioDirecti
 }
 
 bool DrvGpioDigitalRead(const u8 pinNumber) {
+    if (pinNumber > 29) {
+        return false;
+    }
+
     return gpio_get(pinNumber);
 }
 
 void DrvGpioDigitalWrite(const u8 pinNumber, const bool value) {
+    if (pinNumber > 29) {
+        return;
+    }
+
     gpio_put(pinNumber, value);
 }
 

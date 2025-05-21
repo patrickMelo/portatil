@@ -14,6 +14,8 @@ static u8  colorPalette[ScreenColors * 3];
 static u16 transparentColor = ColorNone;
 static u16 backgroundColor  = ColorNone;
 static u16 foregroundColor  = ColorNone;
+static u64 lastBusyTime     = 0;
+static u64 busyTime         = 0;
 
 static void buildColorPalette(void) {
     static const u8 minValues[48] = {
@@ -104,9 +106,14 @@ static void buildColorPalette(void) {
 
 // Driver ---------------------------------------------------------------------
 
+#define startTimer() u64 startTime = DrvCpuGetTick()
+#define stopTimer()  busyTime += DrvCpuGetTick() - startTime
+
 bool DrvGpuInitialize(void) {
     buildColorPalette();
+    DrvDisplaySetColorPallete(colorPalette);
     memset(&framebuffer, 0, sizeof(framebuffer));
+    busyTime = 0;
     return true;
 }
 
@@ -115,13 +122,24 @@ void DrvGpuFinalize(void) {
 }
 
 void DrvGpuClear(const u8 colorIndex) {
+    startTimer();
+
     for (uint pixelIndex = 0; pixelIndex < ScreenPixels; pixelIndex++) {
         framebuffer[pixelIndex] = colorIndex;
     }
+
+    stopTimer();
 }
 
-void DrvGpuSync(void) {
-    DrvDisplaySync(framebuffer, colorPalette);
+u64 DrvGpuSync(void) {
+    DrvDisplaySync(framebuffer);
+    lastBusyTime = busyTime;
+    busyTime     = 0;
+    return lastBusyTime;
+}
+
+u64 DrvGpuGetTime(void) {
+    return lastBusyTime;
 }
 
 void DrvGpuSetTransparentColor(const u16 colorIndex) {
@@ -137,6 +155,8 @@ void DrvGpuSetForegroundColor(const u16 colorIndex) {
 }
 
 u8 DrvGpuGetNearestColorIndex(const u8 redValue, const u8 greenValue, const u8 blueValue) {
+    startTimer();
+
     u8  nearestIndex    = 0;
     int nearestDistance = INT32_MAX;
 
@@ -156,6 +176,7 @@ u8 DrvGpuGetNearestColorIndex(const u8 redValue, const u8 greenValue, const u8 b
         }
     }
 
+    stopTimer();
     return nearestIndex;
 }
 
@@ -173,6 +194,8 @@ void DrvGpuDraw(const Image* image, const Point2D* position, const Rectangle2D* 
         (offsetTargetRect.X + offsetTargetRect.Width < 0) || (offsetTargetRect.Y + offsetTargetRect.Height < 0)) {
         return;
     }
+
+    startTimer();
 
     if (offsetTargetRect.X < 0) {
         offsetClipRect.X -= offsetTargetRect.X;
@@ -222,6 +245,8 @@ void DrvGpuDraw(const Image* image, const Point2D* position, const Rectangle2D* 
             framebuffer[targetPixelIndex] = pixelColor;
         }
     }
+
+    stopTimer();
 }
 
 void DrvGpuDrawScaled(const Image* image, const Rectangle2D* sourceRect, const Rectangle2D* targetRect) {
@@ -232,6 +257,8 @@ void DrvGpuDrawScaled(const Image* image, const Rectangle2D* sourceRect, const R
         (offsetTargetRect.X + offsetTargetRect.Width < 0) || (offsetTargetRect.Y + offsetTargetRect.Height < 0)) {
         return;
     }
+
+    startTimer();
 
     static i16 offsetDifference;
 
@@ -292,6 +319,8 @@ void DrvGpuDrawScaled(const Image* image, const Rectangle2D* sourceRect, const R
             framebuffer[targetPixelIndex] = pixelColor;
         }
     }
+
+    stopTimer();
 }
 
 void DrvGpuDrawRectangle(const Rectangle2D* rectangle, const u8 colorIndex) {
@@ -301,6 +330,8 @@ void DrvGpuDrawRectangle(const Rectangle2D* rectangle, const u8 colorIndex) {
         (offsetRectangle.X + offsetRectangle.Width < 0) || (offsetRectangle.Y + offsetRectangle.Height < 0)) {
         return;
     }
+
+    startTimer();
 
     if (offsetRectangle.X < 0) {
         offsetRectangle.Width += offsetRectangle.X;
@@ -328,4 +359,6 @@ void DrvGpuDrawRectangle(const Rectangle2D* rectangle, const u8 colorIndex) {
             framebuffer[pixelIndex] = colorIndex;
         }
     }
+
+    stopTimer();
 }

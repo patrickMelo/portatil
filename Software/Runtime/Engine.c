@@ -7,6 +7,12 @@
 
 #include "Engine.h"
 
+static u64 busyTime     = 0;
+static u64 lastBusyTime = 0;
+
+#define startTimer() u64 startTime = GetTick()
+#define stopTimer()  busyTime += GetTick() - startTime
+
 // Sprites --------------------------------------------------------------------
 
 static u32    nextFreeSpriteIndex = 0;
@@ -16,6 +22,8 @@ Sprite* GetSprite(const Image* image) {
     if (nextFreeSpriteIndex >= MaxSprites) {
         return NULL;
     }
+
+    startTimer();
 
     sprites[nextFreeSpriteIndex].IsFree           = false;
     sprites[nextFreeSpriteIndex].Image            = *image;
@@ -36,6 +44,7 @@ Sprite* GetSprite(const Image* image) {
         }
     }
 
+    stopTimer();
     return sprite;
 }
 
@@ -85,6 +94,8 @@ Entity* GetEntity(const u8 layerIndex, const u32 typeID, const Sprite* sprite, c
         return 0;
     }
 
+    startTimer();
+
     Entity* entity = &entities[layerIndex][numberOfEntities[layerIndex]++];
 
     entity->TypeID      = typeID;
@@ -99,6 +110,7 @@ Entity* GetEntity(const u8 layerIndex, const u32 typeID, const Sprite* sprite, c
 
     entity->ReleaseAfterSync = false;
 
+    stopTimer();
     return entity;
 }
 
@@ -123,6 +135,8 @@ Entity* GetCollidingEntity(const Entity* entity, const u32 otherEntityTypeID) {
         return NULL;
     }
 
+    startTimer();
+
     Rectangle2D entityRect = {
         .X      = F16ToInt(entity->Position.X),
         .Y      = F16ToInt(entity->Position.Y),
@@ -146,10 +160,12 @@ Entity* GetCollidingEntity(const Entity* entity, const u32 otherEntityTypeID) {
             (otherEntityRect.X + otherEntityRect.Width > entityRect.X) &&
             (otherEntityRect.Y < entityRect.Y + entityRect.Height) &&
             (otherEntityRect.Y + otherEntityRect.Height > entityRect.Y)) {
+            stopTimer();
             return &entities[entity->LayerIndex][otherEntityIndex];
         }
     }
 
+    stopTimer();
     return NULL;
 }
 
@@ -169,6 +185,8 @@ i32 FindEntityIndex(const u8 layerIndex, const u32 typeID, const u32 occurrenceN
         return -1;
     }
 
+    startTimer();
+
     u32 occurrencesFound = 0;
 
     for (u32 entityIndex = 0; entityIndex < numberOfEntities[layerIndex]; entityIndex++) {
@@ -176,11 +194,13 @@ i32 FindEntityIndex(const u8 layerIndex, const u32 typeID, const u32 occurrenceN
             occurrencesFound++;
 
             if (occurrencesFound == occurrenceNumber) {
+                stopTimer();
                 return entityIndex;
             }
         }
     }
 
+    stopTimer();
     return -1;
 }
 
@@ -191,6 +211,8 @@ void InitializeEngine(void) {
 }
 
 void ResetEngine(void) {
+    startTimer();
+
     for (u32 spriteIndex = 0; spriteIndex < MaxSprites; ++spriteIndex) {
         sprites[spriteIndex].Index  = spriteIndex;
         sprites[spriteIndex].IsFree = true;
@@ -206,9 +228,13 @@ void ResetEngine(void) {
             entities[layerIndex][entityIndex].Index      = entityIndex;
         }
     }
+
+    stopTimer();
 }
 
-void SyncEngine(const f16 speedMultiplier) {
+u64 SyncEngine(const f16 speedMultiplier) {
+    startTimer();
+
     for (u8 layerIndex = 0; layerIndex < MaxLayers; layerIndex++) {
         for (u32 entityIndex = 0; entityIndex < numberOfEntities[layerIndex]; ++entityIndex) {
             Entity* entity = &entities[layerIndex][entityIndex];
@@ -252,4 +278,15 @@ void SyncEngine(const f16 speedMultiplier) {
             entityIndex++;
         }
     }
+
+    stopTimer();
+
+    lastBusyTime = busyTime;
+    busyTime     = 0;
+
+    return lastBusyTime;
+}
+
+u64 GetEngineTime(void) {
+    return lastBusyTime;
 }

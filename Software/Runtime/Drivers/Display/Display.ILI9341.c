@@ -123,15 +123,18 @@ void finalizeDisplay(void) {
 #define displayWidth  320
 #define displayHeight 240
 
-#define blitRows   4
+#define blitRows   12
 #define blitWidth  displayWidth
 #define blitHeight (displayHeight / blitRows)
 #define blitPixels (blitWidth * blitHeight)
 
 static u16 blitBuffer[blitPixels];
 static u8  localFrameBuffer[ScreenPixels];
-static u8  localColorPalette[ScreenColors * 3];
+static u16 displayColorPalette[ScreenColors * 3];
 static u8  coreIndex;
+
+static u64 lastSyncTick = 0;
+static u64 busyTime     = 0;
 
 static inline u16 toDisplayColor(const u8* color) {
     // RRRRR GGGGGG BBBBB
@@ -142,14 +145,17 @@ static inline u16 toDisplayColor(const u8* color) {
     return (displayColor << 8) | (displayColor >> 8);
 }
 
-static inline void fillBlitBuffer(const u8 startY) {
+static inline void fillBlitBuffer(const u32 startY) {
     static u32 pixelIndex;
     static u16 pixelColor;
+    static u32 lineStart;
 
     for (u16 pixelY = 0; pixelY < blitHeight / 2; pixelY++) {
+        lineStart = ((startY + pixelY) * ScreenWidth);
+
         for (u16 pixelX = 0; pixelX < ScreenWidth; pixelX++) {
-            pixelIndex = ((startY + pixelY) * ScreenWidth) + pixelX;
-            pixelColor = toDisplayColor(&localColorPalette[localFrameBuffer[pixelIndex] * 3]);
+            pixelIndex = lineStart + pixelX;
+            pixelColor = displayColorPalette[localFrameBuffer[pixelIndex]];
 
             blitBuffer[(pixelY * 2 * blitWidth) + (pixelX * 2)]           = pixelColor;
             blitBuffer[(pixelY * 2 * blitWidth) + (pixelX * 2 + 1)]       = pixelColor;
@@ -162,6 +168,13 @@ static inline void fillBlitBuffer(const u8 startY) {
 void syncCore(void) {
     for (;;) {
         DrvCpuWaitMessage(coreIndex, NULL);
+
+        u64 startTime = DrvCpuGetTick();
+
+        if (startTime - lastSyncTick > TargetFrameTime) {
+            continue;
+        }
+
         DrvSerialWait(serialPortNumber);
 
         setAddress(0, 0, displayWidth - 1, displayHeight - 1);
@@ -171,12 +184,13 @@ void syncCore(void) {
 
         for (u8 rowIndex = 0; rowIndex < blitRows; rowIndex++) {
             DrvSerialWait(serialPortNumber);
-
             fillBlitBuffer(pixelY);
             pixelY += blitHeight / 2;
 
             DrvSerialWrite(serialPortNumber, blitPixels * 2, (u8*) blitBuffer);
         }
+
+        busyTime = DrvCpuGetTick() - startTime;
     }
 }
 
@@ -200,6 +214,7 @@ bool DrvDisplayInitialize(void) {
         return false;
     }
 
+    busyTime = 0;
     return true;
 }
 
@@ -207,9 +222,22 @@ void DrvDisplayFinalize(void) {
     finalizeDisplay();
 }
 
-void DrvDisplaySync(const u8* framebufferData, const u8* colorPalette) {
+void DrvDisplaySetColorPallete(const u8* colorPalette) {
+    for (u32 colorIndex = 0; colorIndex < ScreenColors; colorIndex++) {
+        displayColorPalette[colorIndex] = toDisplayColor(&colorPalette[colorIndex * 3]);
+    }
+}
+
+u64 DrvDisplaySync(const u8* framebufferData) {
+    lastSyncTick = DrvCpuGetTick();
+
     memcpy(&localFrameBuffer, framebufferData, ScreenPixels);
-    memcpy(&localColorPalette, colorPalette, ScreenColors * 3);
 
     DrvCpuSendMessage(coreIndex, NULL);
+
+    return busyTime;
+}
+
+u64 DrvDisplayGetTime(void) {
+    return busyTime;
 }

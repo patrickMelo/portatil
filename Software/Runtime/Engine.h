@@ -59,6 +59,8 @@ i32     FindEntityIndex(const u8 layerIndex, const u32 typeID, const u32 occurre
 
 void InitializeEngine(void);
 void ResetEngine(void);
-void SyncEngine(const f16 speedMultiplier);
+u64  SyncEngine(const f16 speedMultiplier);
+
+u64 GetEngineTime(void);
 
 #endif    // PORTATIL_ENGINE_H

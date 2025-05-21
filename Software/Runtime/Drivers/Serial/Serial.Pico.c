@@ -101,9 +101,9 @@ bool DrvSerialConfigure(const SerialPortNumber portNumber, const u32 speedHz, co
         channel_config_set_write_increment(&dmaConfig, false);
 
         dma_channel_configure(spi[portNumber].dmaChannel, &dmaConfig, &spi_get_hw(spi[portNumber].hwInstance)->dr, NULL, 0, false);
-    } else {
-        spi_set_format(spi[portNumber].hwInstance, 8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
     }
+
+    spi_set_format(spi[portNumber].hwInstance, 8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
 
     gpio_set_function(spi[portNumber].rxPin, GPIO_FUNC_SPI);
     gpio_set_function(spi[portNumber].csPin, GPIO_FUNC_SPI);

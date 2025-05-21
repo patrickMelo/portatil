@@ -22,6 +22,7 @@ static i16              firstEntryIndex    = 0;
 static i16              lastEntryIndex     = 0;
 static u8               disabledColor      = 0;
 static bool             reloadStorage      = false;
+static bool             oneGameCheck       = false;
 
 static void updateDrawIndexes(void) {
     i8 entriesPerPage = (ScreenHeight - (barHeight * 2)) / (defaultFont->CharHeight + 1);
@@ -316,6 +317,7 @@ void InitializeShell(void) {
     disabledColor = GetNearestColorIndex(64, 64, 64);
 
     resetEntries();
+    oneGameCheck = true;
 }
 
 void ShellState(const u64 frameTime) {
@@ -323,7 +325,17 @@ void ShellState(const u64 frameTime) {
         reloadStorage = false;
         RefreshStorage();
         resetEntries();
+        oneGameCheck = true;
         return;
+    }
+
+    if (oneGameCheck) {
+        oneGameCheck = false;
+
+        if (numberOfEntries == 1 && IsProgram(directoryEntries[0].Flags)) {
+            loadGame(entryPath);
+            return;
+        }
     }
 
     handleInput();
